@@ -1,0 +1,15 @@
+
+Funkcja rekurencyjna do tworzenia drzewa katalogowego z tablicy trójwymiarowej działa w następujący sposób:
+
+Wejście: Funkcja przyjmuje tablicę trójwymiarową (reprezentującą katalogi i pliki), poziom level i indeks index.
+
+Działanie:
+
+Katalog: Jeśli element w tablicy to katalog, funkcja tworzy katalog (createDirectory), przechodzi do niego (changeDirectory), i rekurencyjnie wywołuje siebie dla podkatalogów w tym katalogu. Po zakończeniu wraca do katalogu nadrzędnego (moveUp).
+Plik: Jeśli element to plik, funkcja tworzy plik (createFile).
+Rekurencja: Funkcja wywołuje się rekurencyjnie dla każdego katalogu, a po zakończeniu wywołania wraca do poprzedniego katalogu.
+
+Zakończenie: Po przetworzeniu wszystkich elementów w tablicy, struktura katalogów i plików zostaje utworzona w systemie.
+
+Złożoność:
+Czas działania funkcji to O(n), gdzie n to liczba katalogów i plików, ponieważ każdy element jest przetwarzany raz.
