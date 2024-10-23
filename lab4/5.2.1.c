@@ -1,31 +1,41 @@
 #include <stdio.h>
 #include <ctype.h>
 
-int countWords1(FILE *fp){
-    int counter = -1; // bo liczy o słowo za duzo czasami
-
+int countWords1(FILE *fp) {
+    int inWord = 0;   // Flaga, czy jesteśmy wewnątrz słowa
+    int counter = 0;
     char ch;
 
-    while ((ch = fgetc(fp)) != EOF)
-    {
-        if (!isspace(ch))
-        {
-            continue;
+    while ((ch = fgetc(fp)) != EOF) {
+        if (isspace(ch)) {
+            if (inWord) {
+                counter++;  // Koniec słowa
+                inWord = 0;
+            }
+        } else {
+            inWord = 1;  // Jesteśmy w środku słowa
         }
-                
+    }
+
+    // Jeśli plik kończy się słowem, trzeba dodać to słowo
+    if (inWord) {
         counter++;
     }
-    printf("Liczba słów: %d", counter);
+
+    return counter;
 }
 
 int main() {
     FILE *fp = fopen("./file.txt", "r");
-    
+
     if (fp == NULL) {
         printf("Nie udalo się otworzyc pliku.\n");
         return 1;
     }
-    countWords1(fp);
+
+    int wordCount = countWords1(fp);
+    printf("Liczba słów: %d\n", wordCount);
+    
     fclose(fp);
 
     return 0;

@@ -1,40 +1,24 @@
 #include<stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
+#include <string.h>
 
 void printWords(FILE *fp) {
     int maxLineLenght = 128;
 
     char *lineBuffer = (char *)malloc(sizeof(char) * maxLineLenght);
-    char ch;
-    int i = 0;
 
-    while ((ch = fgetc(fp)) != EOF)
-    {
-
-        // drukuj słowo jeżeli wykryjesz spacje
-        if (isspace(ch) && i > 0)
-        {
-            lineBuffer[i] = '\0';
-            printf("%s\n", lineBuffer);
-            i = 0;
+    while (fgets(lineBuffer, maxLineLenght, fp) != NULL) {
+        // Użyj strtok do rozdzielenia linii na słowa
+        char *word = strtok(lineBuffer, " \t\n");  // Dzielimy na spacje, tabulatory i nową linię
+        while (word != NULL) {
+            printf("%s\n", word);  // Wypisanie słowa
+            word = strtok(NULL, " \t\n");  // Przejście do następnego słowa
         }
-        
-        // dodawaj do bufora kolejne znaki
-        lineBuffer[i] = ch;
-        i++;
     }
-
-    // print ostatnie słowo
-    if (i > 0)
-    {
-        lineBuffer[i] = '\0';
-        printf("%s\n", lineBuffer);
-    }
-    
 
     free(lineBuffer);
 }
+
 
 int main() {
     FILE *fp = fopen("./file.txt", "r");

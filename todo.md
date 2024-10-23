@@ -1,1 +1,1 @@
-3.1 - 4.1.6 -> skleić w jeden program
+5.1.3 * i 5.2.2*
