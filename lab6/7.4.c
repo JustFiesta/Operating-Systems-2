@@ -1,53 +1,49 @@
-#include<stdio.h>
-#include<math.h>
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
 int cyfry1(int number) {
-    int minus = 0;
+    if (number == 0) return 1;
 
-    if (number < 0)
-    {
-        minus = 1;
-    }
-    
-    int result = log(abs(number + 1));
-
-    if (minus == 1)
-    {
-        result *= -1;
-    }
-
-    return result;
+    return (int)log10(abs(number)) + 1;
 }
 
 int cyfry2(int number) {
     char buffer[50];
-    snprintf(buffer; 50, "%d", );
 
-    return len(buffer);
+    snprintf(buffer, sizeof(buffer), "%d", number);
+
+    int count = 0;
+    for (int i = 0; buffer[i] != '\0'; i++) { 
+        if (buffer[i] >= '0' && buffer[i] <= '9') {
+            count++;
+        }
+    }
+
+    return count;
 }
+
 int cyfry3(int number) {
-    int minus = 0;
-    
-    if (number < 0)
-    {
-        minus = 1;
-    }
-    
-    int result = log(abs(number + 1));
+    if (number == 0) return 1;
 
-    if (minus == 1)
-    {
-        result *= -1;
+    int count = 0;
+
+    number = abs(number);
+
+    while (number > 0) {
+        number /= 10;
+        count++;
     }
 
-    return result;
+    return count;
 }
 
-int main(int argc, char const *argv[])
-{
+int main() {
     int num = -3579;
-    printf("cyfry1(%i): %i",num, cyfry1(num));
 
+    printf("cyfry1(%d) = %d\n", num, cyfry1(num));
+    printf("cyfry2(%d) = %d\n", num, cyfry2(num));
+    printf("cyfry3(%d) = %d\n", num, cyfry3(num));
 
     return 0;
 }
