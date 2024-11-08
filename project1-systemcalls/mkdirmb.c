@@ -1,41 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/syscall.h>
 #include <sys/stat.h>
-#include <sys/types.h>
-#include <string.h>
-#include <libgen.h>
+#include <linux/limits.h>
 #include <errno.h>
+#include <string.h>
+
+#define MKDIR_SYSCALL_NUM  __NR_mkdir
+#define CHMOD_SYSCALL_NUM  __NR_chmod
 
 void print_usage(const char *progname) {
     fprintf(stderr, "Usage: %s [-p] [-m mode] directory_path\n", progname);
 }
 
+// Funkcja do wywoływania syscalla mkdir
+int syscall_mkdir(const char *path, mode_t mode) {
+    return syscall(MKDIR_SYSCALL_NUM, path, mode);
+}
+
 // Funkcja do rekurencyjnego tworzenia katalogów (gdy -p jest użyte)
 int create_parents(const char *path, mode_t mode) {
-    char *dir_path = strdup(path); // Duplikujemy ścieżkę, aby jej nie zmodyfikować
-    if (!dir_path) {
-        perror("Failed to duplicate path");
-        return -1;
-    }
+    char dir_path[PATH_MAX];
+    strncpy(dir_path, path, PATH_MAX);
 
     for (char *p = dir_path + 1; *p; p++) {
         if (*p == '/') {
             *p = '\0';
-            if (mkdir(dir_path, mode) != 0 && errno != EEXIST) {
+            if (syscall_mkdir(dir_path, mode) != 0 && errno != EEXIST) {
                 perror("Failed to create parent directory");
-                free(dir_path);
                 return -1;
             }
             *p = '/';
         }
     }
-    if (mkdir(dir_path, mode) != 0 && errno != EEXIST) {
+    if (syscall_mkdir(dir_path, mode) != 0 && errno != EEXIST) {
         perror("Failed to create directory");
-        free(dir_path);
         return -1;
     }
-    free(dir_path);
     return 0;
 }
 
@@ -79,7 +81,7 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
     } else {
-        if (mkdir(dir_path, mode) != 0) {
+        if (syscall_mkdir(dir_path, mode) != 0) {
             perror("Failed to create directory");
             return EXIT_FAILURE;
         }
