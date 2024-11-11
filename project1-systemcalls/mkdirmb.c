@@ -68,10 +68,10 @@ int main(int argc, char *argv[]) {
                 break;
             case 'h':
                 print_usage(argv[0]);
-                return EXIT_SUCCESS;
+                return EXIT_SUCCESS; // successfull execution from stdlib
             default:
                 print_usage(argv[0]);
-                return EXIT_FAILURE;
+                return EXIT_FAILURE; // failure execution from stdlib
         }
     }
 
