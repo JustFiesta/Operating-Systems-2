@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define BUFFER_SIZE 100
 
@@ -17,24 +18,44 @@ void add_numbers(int a, int b) {
     memset(result, ' ', sizeof(result));
     memset(carry, ' ', sizeof(carry));
 
-    result[len_max + 1] = '\0';
-    carry[len_max + 1] = '\0';
+    result[len_max] = '\0';
+    carry[len_max] = '\0';
 
-    for (i = len_a - 1, j = len_b - 1; len_max >= 0; i--, j--, len_max--) {
+    for (i = len_a - 1, j = len_b - 1; i >= 0 || j >= 0; i--, j--) {
         int digit_a = (i >= 0) ? str_a[i] - '0' : 0;
         int digit_b = (j >= 0) ? str_b[j] - '0' : 0;
 
         sum = digit_a + digit_b + carry_over;
-        result[len_max + 1] = (sum % 10) + '0';
+        result[len_max--] = (sum % 10) + '0';
         carry[len_max + 1] = (carry_over > 0) ? carry_over + '0' : ' ';
         carry_over = sum / 10;
     }
-    result[0] = carry_over > 0 ? carry_over + '0' : ' ';
-    carry[0] = ' ';
 
-    printf(" %s\n", carry);
-    printf(" %*d\n+%*d\n", strlen(str_a), a, strlen(str_b), b);
-    printf("------\n %s\n", result);
+    if (carry_over > 0) {
+        result[len_max] = carry_over + '0';
+    } else {
+        memmove(result, result + 1, strlen(result));
+    }
+
+    int size_flag = 0;
+
+    printf("%s\n", carry);
+    if ((int)strlen(str_a) > (int)strlen(str_b))
+    {
+        printf(" %*d\n+%*d\n", (int)strlen(str_a), a, (int)strlen(str_a), b);
+        size_flag = (int)strlen(str_a);
+    } else {
+        printf(" %*d\n+%*d\n", (int)strlen(str_b), a, (int)strlen(str_b), b);
+        size_flag = (int)strlen(str_b);
+    }
+
+    for (int i = 0; i < size_flag + 1; i++)
+    {
+        printf("-");
+    }
+    
+    
+    printf("\n %s\n", result);
 }
 
 int main() {
