@@ -1,115 +1,187 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>  // Dodane dla pid_t
-#include <sys/wait.h>   // Dodane dla wait()
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <errno.h>
+#include <ctype.h>
 
+#define MAX_CMDLINE 1024
 #define BUFFER_SIZE 256
 
-// Funkcja do odczytu zużycia CPU
-float get_cpu_usage(pid_t pid) {
-    char filename[BUFFER_SIZE];
-    snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
-    FILE *file = fopen(filename, "r");
+// Struktura przechowująca informacje o wykorzystaniu zasobów
+typedef struct {
+    double cpu_usage;
+    long memory_usage;
+} ResourceUsage;
+
+// Funkcja do parsowania linii poleceń
+char** parse_command(const char* cmd) {
+    char* cmd_copy = strdup(cmd);
+    char** args = malloc(sizeof(char*) * MAX_CMDLINE);
+    int i = 0;
     
-    if (!file) {
-        perror("fopen");
-        return -1;
+    char* token = strtok(cmd_copy, " ");
+    while (token != NULL && i < MAX_CMDLINE - 1) {
+        args[i] = strdup(token);
+        token = strtok(NULL, " ");
+        i++;
     }
-
-    long utime, stime, cutime, cstime, starttime;
-    fscanf(file, "%*d %*s %*c %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %ld %ld %ld %ld %ld", 
-           &utime, &stime, &cutime, &cstime, &starttime);
-    fclose(file);
-
-    // Obliczanie całkowitego czasu CPU
-    long total_time = utime + stime + cutime + cstime;
-    long uptime = sysconf(_SC_CLK_TCK);  // Zegar systemowy
-    float cpu_usage = (float)total_time / uptime * 100;  // Przemiana na procenty
-
-    return cpu_usage;
+    args[i] = NULL;
+    
+    free(cmd_copy);
+    return args;
 }
 
-// Funkcja do odczytu zużycia pamięci
-long get_memory_usage(pid_t pid) {
-    char filename[BUFFER_SIZE];
-    snprintf(filename, sizeof(filename), "/proc/%d/status", pid);
-    FILE *file = fopen(filename, "r");
-    
-    if (!file) {
-        perror("fopen");
-        return -1;
+// Funkcja do czyszczenia zaalokowanej pamięci
+void cleanup_args(char** args) {
+    for (int i = 0; args[i] != NULL; i++) {
+        free(args[i]);
     }
+    free(args);
+}
 
-    char line[BUFFER_SIZE];
-    long memory_usage = 0;
+// Funkcja do pobierania statystyk CPU procesu
+double get_cpu_usage(pid_t pid) {
+    char stat_path[64];
+    snprintf(stat_path, sizeof(stat_path), "/proc/%d/stat", pid);
+    
+    FILE* f = fopen(stat_path, "r");
+    if (!f) return -1.0;
+    
+    long utime, stime;
+    char* line = NULL;
+    size_t len = 0;
+    
+    if (getline(&line, &len, f) != -1) {
+        char* token = strtok(line, " ");
+        int i;
+        for (i = 1; token && i < 14; i++) {
+            token = strtok(NULL, " ");
+        }
+        if (token) {
+            utime = atol(token);
+            token = strtok(NULL, " ");
+            if (token) {
+                stime = atol(token);
+                double total_time = (utime + stime) / (double)sysconf(_SC_CLK_TCK);
+                free(line);
+                fclose(f);
+                return total_time * 100.0;
+            }
+        }
+    }
+    
+    free(line);
+    fclose(f);
+    return -1.0;
+}
 
-    // Szukamy linii z "VmRSS", która podaje pamięć używaną przez proces
-    while (fgets(line, sizeof(line), file)) {
+// Funkcja do pobierania zużycia pamięci procesu
+long get_memory_usage(pid_t pid) {
+    char status_path[64];
+    snprintf(status_path, sizeof(status_path), "/proc/%d/status", pid);
+    
+    FILE* f = fopen(status_path, "r");
+    if (!f) return -1;
+    
+    char line[256];
+    long vm_size = -1;
+    
+    while (fgets(line, sizeof(line), f)) {
         if (strncmp(line, "VmRSS:", 6) == 0) {
-            sscanf(line, "VmRSS: %ld kB", &memory_usage);
+            char* ptr = line + 6;
+            while (*ptr && isspace(*ptr)) ptr++;
+            vm_size = atol(ptr);
             break;
         }
     }
-    fclose(file);
-
-    return memory_usage;
+    
+    fclose(f);
+    return vm_size;
 }
 
-int main(int argc, char *argv[]) {
-    // Sprawdzenie, czy podano odpowiednią liczbę argumentów
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <process_name>\n", argv[0]);
+// Główna funkcja monitorująca
+void monitor_process(pid_t pid) {
+    printf("\nMonitoring process (PID: %d)\n", pid);
+    printf("Press Ctrl+C to stop monitoring\n\n");
+    
+    double prev_cpu_time = 0;
+    struct timespec sleep_time = {1, 0}; // 1 sekunda
+    
+    while (1) {
+        // Sprawdź, czy proces nadal działa
+        if (kill(pid, 0) == -1) {
+            if (errno == ESRCH) {
+                printf("Process has terminated.\n");
+                break;  // Proces zakończył działanie, więc kończymy monitorowanie
+            } else {
+                perror("Error checking process status");
+                break;  // Inny błąd, zakończ monitorowanie
+            }
+        }
+        
+        double cpu_time = get_cpu_usage(pid);
+        long memory = get_memory_usage(pid);
+        
+        // Sprawdź, czy odczyt statystyk się powiódł
+        if (cpu_time >= 0 && memory >= 0) {
+            double cpu_usage = cpu_time - prev_cpu_time;
+            printf("CPU Usage: %.1f%% | Memory Usage: %ld KB\n", 
+                   cpu_usage, memory);
+            prev_cpu_time = cpu_time;
+        } else {
+            // Obsłuż sytuację, gdy nie uda się odczytać statystyk
+            printf("Error reading process statistics, process may have terminated.\n");
+            break;
+        }
+        
+        nanosleep(&sleep_time, NULL);
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s \"command [args...]\"\n", argv[0]);
         return 1;
     }
-
-    // Proces potomny
+    
+    // Parsuj komendę i argumenty
+    char** cmd_args = parse_command(argv[1]);
+    if (cmd_args[0] == NULL) {
+        fprintf(stderr, "Error: Empty command\n");
+        cleanup_args(cmd_args);
+        return 1;
+    }
+    
+    printf("Starting process: %s\n", argv[1]);
+    
+    // Utwórz nowy proces
     pid_t pid = fork();
+    
     if (pid < 0) {
-        // Błąd przy tworzeniu procesu
-        perror("fork failed");
+        perror("Fork failed");
+        cleanup_args(cmd_args);
         return 1;
     }
-
-    if (pid == 0) {
-        // Proces potomny - uruchomienie procesu
-        printf("Starting process: %s\n", argv[1]);
-
-        // Użycie execvp() do uruchomienia procesu
-        if (execvp(argv[1], &argv[1]) == -1) {
-            // Błąd przy uruchamianiu procesu
-            perror("execvp failed");
-            return 1;
-        }
-    } else {
-        // Proces macierzysty - monitorowanie procesu
-        printf("Monitoring process: %s\n", argv[1]);
-        while (1) {
-            // Monitorowanie zużycia CPU
-            float cpu_usage = get_cpu_usage(pid);
-            long memory_usage = get_memory_usage(pid);
-
-            if (cpu_usage == -1 || memory_usage == -1) {
-                break;  // Błąd odczytu danych
-            }
-
-            // Wyświetlanie zużycia zasobów
-            printf("CPU Usage: %.2f%% | Memory Usage: %ld KB\n", cpu_usage, memory_usage);
-
-            // Czekaj 1 sekundę
-            sleep(1);
-
-            // Sprawdzenie, czy proces nadal działa
-            if (kill(pid, 0) == -1) {
-                // Proces zakończył działanie
-                break;
-            }
-        }
-
-        wait(NULL);  // Czekaj, aż proces potomny się zakończy
-        printf("Process %s finished\n", argv[1]);
+    
+    if (pid == 0) {  // Proces potomny
+        execvp(cmd_args[0], cmd_args);
+        perror("Exec failed");
+        cleanup_args(cmd_args);
+        exit(1);
     }
-
+    
+    // Proces rodzicielski
+    monitor_process(pid);
+    
+    // Poczekaj na zakończenie procesu potomnego
+    int status;
+    waitpid(pid, &status, 0);
+    
+    cleanup_args(cmd_args);
     return 0;
 }
