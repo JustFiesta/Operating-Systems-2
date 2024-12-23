@@ -1,29 +1,91 @@
 # Nazwa pliku wykonywalnego
 TARGET = env-manager
 
-# Katalog źródeł
+# Katalogi
 SRC_DIR = src
+OBJ_DIR = obj
+TEST_DIR = tests
 
 # Pliki źródłowe
 SRC = $(SRC_DIR)/env-manager.c
+OBJ = $(OBJ_DIR)/env-manager.o
 
-# Flagi kompilatora
-CFLAGS = -Wall -Wextra -O2
+# Kompilator i flagi
+CC = gcc
+# Flagi podstawowe
+CFLAGS = 
+# Flagi optymalizacji
+CFLAGS += -O2
+# Flagi bezpieczeństwa
+CFLAGS += -fstack-protector-all -D_FORTIFY_SOURCE=2
+# Flagi standardu
+CFLAGS += -std=c11
+
+# Flagi dla wersji debug
+DEBUG_FLAGS = -g -DDEBUG
 
 # Domyślne zadanie: kompilacja programu
-all: $(TARGET)
+all: dirs $(TARGET)
+
+# Tworzenie potrzebnych katalogów
+dirs:
+	mkdir -p $(OBJ_DIR)
 
 # Kompilacja programu
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $< -o $@
+$(TARGET): $(OBJ)
+	$(CC) $(OBJ) -o $@
+
+# Kompilacja obiektów
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Wersja debug
+debug: CFLAGS += $(DEBUG_FLAGS)
+debug: clean all
 
 # Uruchamianie programu
 run: $(TARGET)
 	./$(TARGET)
 
-# Czyszczenie plików wykonywalnych
+# Target do testów
+test: $(TARGET)
+	@echo "Running tests..."
+	@if [ -d "$(TEST_DIR)" ]; then \
+		for test in $(TEST_DIR)/*.sh; do \
+			if [ -f "$$test" ]; then \
+				echo "\nRunning $$test:"; \
+				bash "$$test"; \
+			fi \
+		done \
+	else \
+		echo "No tests directory found."; \
+	fi
+
+# Sprawdzanie poprawności kodu
+check: $(SRC)
+	cppcheck --enable=all --suppress=missingIncludeSystem $(SRC)
+
+# Czyszczenie plików wykonywalnych i obiektów
 clean:
 	rm -f $(TARGET)
+	rm -rf $(OBJ_DIR)
 
-# Phony targets (niezależne od plików w katalogu)
-.PHONY: all run clean
+# Instalacja (opcjonalne)
+install: $(TARGET)
+	install -d $(DESTDIR)/usr/local/bin
+	install -m 755 $(TARGET) $(DESTDIR)/usr/local/bin
+
+# Pomoc
+help:
+	@echo "Available targets:"
+	@echo "  all     : Build the program (default)"
+	@echo "  debug   : Build with debug information"
+	@echo "  run     : Build and run the program"
+	@echo "  test    : Run test suite"
+	@echo "  check   : Run static code analysis"
+	@echo "  clean   : Remove built files"
+	@echo "  install : Install the program"
+	@echo "  help    : Show this help message"
+
+# Phony targets
+.PHONY: all dirs debug run test check clean install help
