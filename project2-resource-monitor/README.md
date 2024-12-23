@@ -1,25 +1,21 @@
-# Environment variable manager
+# Resource monitor
 
 This project is using my current knowleage of Linux programming to create manager for envs.
 
 It works for current session only.
 
-It can do env operations:
-
-* list
-* add
-* remove
+It can monitor resources (CPU, RAM) of given process.
 
 Made for Linux x86_64.
 
 ## Build process
 
-TODO
+```shell
+make
+```
 
 ## Usage
 
 ```shell
-env-manager list
-env-manager add NEW-VAR=content
-env-manager remove NEW-VAR
+./resource-monitor "firefox"
 ```
