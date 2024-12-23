@@ -26,6 +26,10 @@ env-manager add NEW-VAR=content
 env-manager remove NEW-VAR
 ```
 
+## Dependencies
+
+* gcc
+
 ## Used properties
 
 * listing - [environ](https://www.man7.org/linux/man-pages/man7/environ.7.html)
