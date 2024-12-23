@@ -30,8 +30,7 @@ test_list() {
 # Test 2: Dodawanie zmiennej
 test_add() {
     $PROGRAM add TEST_VAR=hello
-    # Sprawdź czy zmienna została dodana
-    if [ "$TEST_VAR" = "hello" ]; then
+    if env | grep -q "^TEST_VAR=hello$"; then
         report_test "Adding environment variable" 0
     else
         report_test "Adding environment variable" 1
@@ -42,7 +41,7 @@ test_add() {
 test_remove() {
     export TEST_VAR_REMOVE=test
     $PROGRAM remove TEST_VAR_REMOVE
-    if [ -z "$TEST_VAR_REMOVE" ]; then
+    if ! env | grep -q "^TEST_VAR_REMOVE="; then
         report_test "Removing environment variable" 0
     else
         report_test "Removing environment variable" 1
@@ -53,7 +52,7 @@ test_remove() {
 test_overwrite() {
     $PROGRAM add TEST_VAR=hello
     $PROGRAM add TEST_VAR=world
-    if [ "$TEST_VAR" = "world" ]; then
+    if env | grep -q "^TEST_VAR=world$"; then
         report_test "Overwriting existing variable" 0
     else
         report_test "Overwriting existing variable" 1
