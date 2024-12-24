@@ -89,19 +89,19 @@ long get_memory_usage(pid_t pid) {
     if (!f) return -1;
     
     char line[256];
-    long vm_size = -1;
+    long vm_rss = -1;
     
     while (fgets(line, sizeof(line), f)) {
         if (strncmp(line, "VmRSS:", 6) == 0) {
             char* ptr = line + 6;
             while (*ptr && isspace(*ptr)) ptr++;
-            vm_size = atol(ptr);
+            vm_rss = atol(ptr);
             break;
         }
     }
     
     fclose(f);
-    return vm_size;
+    return vm_rss;
 }
 
 // Główna funkcja monitorująca
@@ -125,13 +125,14 @@ void monitor_process(pid_t pid) {
         }
         
         double cpu_time = get_cpu_usage(pid);
-        long memory = get_memory_usage(pid);
+        long memory_kb = get_memory_usage(pid);
         
         // Sprawdź, czy odczyt statystyk się powiódł
-        if (cpu_time >= 0 && memory >= 0) {
+        if (cpu_time >= 0 && memory_kb >= 0) {
             double cpu_usage = cpu_time - prev_cpu_time;
-            printf("CPU Usage: %.1f%% | Memory Usage: %ld KB\n", 
-                   cpu_usage, memory);
+            double memory_mb = memory_kb / 1024.0;
+            printf("CPU Usage: %.1f%% | Memory Usage: %.2f MB\n", 
+                   cpu_usage, memory_mb);
             prev_cpu_time = cpu_time;
         } else {
             // Obsłuż sytuację, gdy nie uda się odczytać statystyk
