@@ -113,21 +113,19 @@ void monitor_process(pid_t pid) {
     struct timespec sleep_time = {1, 0}; // 1 sekunda
     
     while (1) {
-        // Sprawdź, czy proces nadal działa
         if (kill(pid, 0) == -1) {
             if (errno == ESRCH) {
                 printf("Process has terminated.\n");
-                break;  // Proces zakończył działanie, więc kończymy monitorowanie
+                break;
             } else {
                 perror("Error checking process status");
-                break;  // Inny błąd, zakończ monitorowanie
+                break;
             }
         }
         
         double cpu_time = get_cpu_usage(pid);
         long memory_kb = get_memory_usage(pid);
         
-        // Sprawdź, czy odczyt statystyk się powiódł
         if (cpu_time >= 0 && memory_kb >= 0) {
             double cpu_usage = cpu_time - prev_cpu_time;
             double memory_mb = memory_kb / 1024.0;
@@ -135,7 +133,6 @@ void monitor_process(pid_t pid) {
                    cpu_usage, memory_mb);
             prev_cpu_time = cpu_time;
         } else {
-            // Obsłuż sytuację, gdy nie uda się odczytać statystyk
             printf("Error reading process statistics, process may have terminated.\n");
             break;
         }
@@ -169,11 +166,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    if (pid == 0) {  // Proces potomny
+    if (pid == 0) {
         execvp(cmd_args[0], cmd_args);
         perror("Exec failed");
         cleanup_args(cmd_args);
-        exit(1);
+        return 1;
     }
     
     // Proces rodzicielski
@@ -184,5 +181,14 @@ int main(int argc, char* argv[]) {
     waitpid(pid, &status, 0);
     
     cleanup_args(cmd_args);
-    return 0;
+    
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    } else if (WIFSIGNALED(status)) {
+        fprintf(stderr, "Process terminated by signal %d\n", WTERMSIG(status));
+        return 1;
+    } else {
+        fprintf(stderr, "Process terminated abnormally\n");
+        return 1;
+    }
 }
