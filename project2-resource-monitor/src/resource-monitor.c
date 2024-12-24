@@ -133,7 +133,7 @@ void monitor_process(pid_t pid) {
                    cpu_usage, memory_mb);
             prev_cpu_time = cpu_time;
         } else {
-            printf("Error reading process statistics, process may have terminated.\n");
+            printf("Process may have terminated.\n");
             break;
         }
         
