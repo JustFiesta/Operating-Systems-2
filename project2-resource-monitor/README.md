@@ -1,8 +1,6 @@
 # Resource monitor
 
-This project is using my current knowleage of Linux programming to create manager for envs.
-
-It works for current session only.
+Program for monitoring process resource use (CPU, RAM) in Linux systems.
 
 It can monitor resources (CPU, RAM) of given process.
 
@@ -17,13 +15,21 @@ make
 ## Usage
 
 ```shell
+./resource-monitor "command [arguments]"
+```
+
+### Example
+
+```shell
 ./resource-monitor "firefox"
 ./resource-monitor firefox
+./resource-monitor "cat /dev/zero > /dev/null"
 ```
 
 ## Dependencies
 
-* gcc
+* GCC
+* Make
 
 ## User resources
 
@@ -38,10 +44,12 @@ make
     * /proc/[PID]/stat - CPU info
     * /proc/[PID]/status - memory info
 
-[Linux `/proc` filesystem](https://www.kernel.org/doc/Documentation/filesystems/proc.txt)
+    [Linux `/proc` filesystem](https://www.kernel.org/doc/Documentation/filesystems/proc.txt)
 
 3. POSIX docs:
 
     * [fork](https://man7.org/linux/man-pages/man2/fork.2.html)()
     * [execvp](https://www.man7.org/linux/man-pages/man3/exec.3p.html)()
     * [waitpid](https://man7.org/linux/man-pages/man3/waitpid.3p.html)()
+
+4. [GCC flags](https://www.spec.org/cpu2017/flags/gcc.2018-02-16.html)
