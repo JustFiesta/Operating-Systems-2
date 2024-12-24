@@ -12,6 +12,12 @@ Made for Linux x86_64.
 make
 ```
 
+## Tets process
+
+```shell
+make test
+```
+
 ## Usage
 
 ```shell
