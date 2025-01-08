@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <ctype.h>
+#include <time.h>
 
 #define MAX_CMDLINE 1024
 #define BUFFER_SIZE 256
